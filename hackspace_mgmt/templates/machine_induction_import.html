@@ -1,0 +1,31 @@
+{% import 'utils.html' as utils with context %}
+{% extends "base.html" %}
+
+{% block title %}Hackspace home{% endblock %}
+{% block breadcrumbs %}
+<li><a href="{{ url_for('general.index') }}">Home</a></li>
+<li><a href="{{ url_for('induction.index') }}">Inductions</a></li>
+<li><a href="{{ url_for('induction.machine', machine_id=machine.id) }}">{{ machine.name }}</a></li>
+<li>induction import</li>
+{% endblock %}
+
+{% block content %}
+<h2>{{ machine.name }} induction import</h2>
+
+{% if machine.import_message %}
+    <p>{{machine.import_message}}</p>
+{% endif %}
+
+{% call utils.form_tag() %}
+    {{ import_form.hidden_tag() }}
+    <fieldset>
+        {{ utils.render_field(quiz_form, import_form.secret) }}
+        {% if secret_error %}
+        <p>{{ secret_error }}</p>
+        {% endif %}
+    </fieldset>
+
+    {{ utils.render_form_buttons(import_form, return_url) }}
+{% endcall %}
+
+{% endblock %}

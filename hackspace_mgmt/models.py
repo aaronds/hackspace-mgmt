@@ -121,6 +121,8 @@ class Machine(db.Model):
     hide_from_home: Mapped[bool] = mapped_column(nullable=False, default=False)
     requires_in_person: Mapped[bool] = mapped_column(server_default=expression.false())
     induction_valid_for_days: Mapped[int] = mapped_column(server_default="0")
+    import_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
+    import_message: Mapped[str] = mapped_column(String(200), nullable=False, default="")
 
     controllers: Mapped[List["MachineController"]] = relationship(back_populates="machine")
     inductions: Mapped[List["Induction"]] = relationship(back_populates="machine")
