@@ -127,6 +127,7 @@ class Machine(db.Model):
     controllers: Mapped[List["MachineController"]] = relationship(back_populates="machine")
     inductions: Mapped[List["Induction"]] = relationship(back_populates="machine")
     quizzes: Mapped[List["Quiz"]] = relationship(secondary="machine_quiz")
+    tags: Mapped[List['Tag']] = relationship(secondary="machine_tag")
 
     def is_member_inducted(self, member: Member, check_can_induct=False):
         member_quizzes = set(completion.quiz for completion in member.quiz_completions if not completion.has_expired())
@@ -248,3 +249,15 @@ class AuditLog(db.Model):
     data: Mapped[Optional[JSON]] = mapped_column(type_=JSON)
 
     member: Mapped["Member"] = relationship()
+
+
+class Tag(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    def __str__(self):
+        return self.title
+
+class MachineTag(db.Model):
+    machine_id: Mapped[int] = mapped_column(ForeignKey("machine.id"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), primary_key=True)

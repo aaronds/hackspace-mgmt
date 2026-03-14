@@ -15,6 +15,8 @@ bp = Blueprint("induction", __name__)
 
 logger = logging.Logger(__name__)
 
+from .. import limiter
+
 @bp.route("/induction")
 @login_required
 def index():
@@ -50,6 +52,7 @@ def machine(machine_id):
 
 @bp.route("/induction/<int:machine_id>/import", methods=["POST", "GET"])
 @login_required
+@limiter.limit("5 per minute")
 def induction_import(machine_id):
     machine = db.get_or_404(Machine, machine_id)
 
@@ -57,8 +60,7 @@ def induction_import(machine_id):
 
     class ImportForm(FlaskForm):
         submit_label = "Import"
-
-        secret = fields.StringField('Secret',[validators.Length(max=Machine.legacy_password.type.length)]) 
+        secret = fields.PasswordField(str(machine.legacy_auth).title(),[validators.Length(max=Machine.legacy_password.type.length)]) 
 
     import_form = ImportForm(request.form);
 

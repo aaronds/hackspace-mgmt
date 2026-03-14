@@ -4,6 +4,8 @@ import logging
 from flask import Flask
 from flask_assets import Environment, Bundle
 
+from .limiter import limiter
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
@@ -12,6 +14,9 @@ def create_app(test_config=None):
         STORAGE_LOGIN_SECRET="dev",
         STORAGE_APP_URL="http://example.com"
     )
+
+    limiter.init_app(app)
+
     if test_config is None:
         app.config.from_pyfile("config.py", silent=True)
     else:
@@ -44,7 +49,6 @@ def create_app(test_config=None):
 
     from . import label_api
     app.register_blueprint(label_api.bp)
-
 
 
     return app
