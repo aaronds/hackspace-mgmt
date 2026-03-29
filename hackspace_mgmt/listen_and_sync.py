@@ -32,13 +32,14 @@ while 1:
             row = json.loads(notify.payload)
             body = {
                 "email" : row['email'], 
-                "name" : row['preferred_name'] or row['first_name'] + ' ' + row['last_name'],
+                "display_name" : row['preferred_name'] or row['first_name'] + ' ' + row['last_name'],
                 "updated" : row['updated']
             }
             body_json = json.dumps(body).encode("utf-8")
+            print(body_json)
 
             request = Request(
-                BHS_SYNC_URL,
+                BHS_SYNC_URL + str(row['id']),
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "Bearer " + BHS_SYNC_TOKEN
