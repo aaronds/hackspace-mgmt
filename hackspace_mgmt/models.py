@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import JSON, String, ForeignKey, Enum, UniqueConstraint, types, BigInteger
+from sqlalchemy import JSON, String, ForeignKey, Enum, UniqueConstraint, types, BigInteger, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import expression
@@ -83,6 +83,7 @@ class Member(db.Model):
     labels: Mapped[List["Label"]] = relationship(back_populates="member")
 
     quiz_completions: Mapped[List["QuizCompletion"]] = relationship(back_populates="member")
+    updated: Mapped[datetime] = mapped_column(DateTime)
 
     @hybrid_property
     def display_name(self):
@@ -242,7 +243,7 @@ class MachineQuiz(db.Model):
 
 class AuditLog(db.Model):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    logged_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    logged_at: Mapped[datetime] = mapped_column(DateTime)
     category: Mapped[str] = mapped_column(String(32))
     event: Mapped[str] = mapped_column(String(32))
     member_id: Mapped[int] = mapped_column(ForeignKey("member.id"))

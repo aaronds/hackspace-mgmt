@@ -130,3 +130,7 @@ dmypy.json
 
 
 *.csv
+*.swo
+*.swp
+aaron-*
+*-hwm.json

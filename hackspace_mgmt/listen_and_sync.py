@@ -33,7 +33,8 @@ while 1:
             body = {
                 "email" : row['email'], 
                 "display_name" : row['preferred_name'] or row['first_name'] + ' ' + row['last_name'],
-                "updated" : row['updated']
+                "updated" : row['updated'],
+                "end_date" : row['end_date']
             }
             body_json = json.dumps(body).encode("utf-8")
             print(body_json)
