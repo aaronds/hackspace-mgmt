@@ -15,6 +15,8 @@ def create_app(test_config=None):
         STORAGE_APP_URL="http://example.com"
     )
 
+    app.config.from_prefixed_env('MGMT')
+
     limiter.init_app(app)
 
     if test_config is None:

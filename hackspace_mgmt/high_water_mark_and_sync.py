@@ -35,6 +35,7 @@ with Session(engine) as session:
                 "email" : user.email,
                 "display_name" : user.preferred_name or user.first_name + ' ' + user.last_name,
                 "updated" : user.updated.isoformat(),
+                "join_date" : str(user.join_date),
                 "end_date" : str(user.end_date)
             }
 

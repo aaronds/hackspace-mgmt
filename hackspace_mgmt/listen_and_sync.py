@@ -34,7 +34,8 @@ while 1:
                 "email" : row['email'], 
                 "display_name" : row['preferred_name'] or row['first_name'] + ' ' + row['last_name'],
                 "updated" : row['updated'],
-                "end_date" : row['end_date']
+                "end_date" : row['end_date'],
+                "join_date" : row['join_date']
             }
             body_json = json.dumps(body).encode("utf-8")
             print(body_json)
