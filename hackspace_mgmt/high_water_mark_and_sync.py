@@ -31,9 +31,17 @@ with Session(engine) as session:
             if not hwm.get('initialised') and user.end_date:
                 continue
 
+            if user.preferred_name :
+                display_name = user.preferred_name
+            else :
+                display_name = user.first_name
+
+                if user.last_name :
+                    display_name = display_name + ' ' + user.last_name
+
             body = {
                 "email" : user.email,
-                "display_name" : user.preferred_name or user.first_name + ' ' + user.last_name,
+                "display_name" : display_name,
                 "updated" : user.updated.isoformat(),
                 "join_date" : str(user.join_date),
                 "end_date" : str(user.end_date)
