@@ -1,0 +1,22 @@
+{% import 'utils.html' as utils with context %}
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<script type="text/javascript">
+</script>
+{% endblock %}
+
+{% block logout_timer %}
+{% endblock %}
+
+{% block title %}Hackspace home{% endblock %}
+
+{% block content %}
+<div style="text-align:center">
+    <p class="lead">Welcome to Bristol Hackspace Membership System</p>
+    <ul class = "link-list">
+        <li><a href="{{ jwt_start_url }}" class="button" role="button">SSO Login</a></li>
+    </ul>
+</div>
+{% endblock %}

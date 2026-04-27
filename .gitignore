@@ -134,3 +134,4 @@ dmypy.json
 *.swp
 aaron-*
 *-hwm.json
+keys/

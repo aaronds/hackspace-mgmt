@@ -41,11 +41,39 @@ class CardLoginForm(FlaskForm):
 @bp.route("/", methods=("GET", "POST"))
 @login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", is_kiosk=is_kiosk())
+
+@bp.route("/login/jwt", methods=("GET", "POST"))
+def login_jwt():
+    jwt_token = request.args.get('jwt') 
+    jwt_public_key_file = current_app.config["JWT_LOGIN_PUBLIC_KEY_FILE"]
+    jwt_start_url = current_app.config["JWT_LOGIN_START_URL"]
+    jwt_audience = current_app.config["JWT_LOGIN_AUDIENCE"]
+
+    if is_kiosk():
+        return redirect(url_for("general.login"))        
+
+    if jwt_token is not None and jwt_token != "":
+        with open(jwt_public_key_file) as kf:
+            jwt_public_key = kf.read()
+            decoded = jwt.decode(jwt_token, jwt_public_key, audience=jwt_audience, algorithms="RS256")
+            member = db.session.get(Member, decoded['sub'])
+
+            if member is not None and member.id == int(decoded['sub']) :
+                session['logged_in_member'] = member.id
+                session['sid'] = secrets.token_urlsafe()
+                return redirect(url_for("general.index"))
+            else :
+                print(member, int(decoded['sub']))
+
+    return render_template("login_jwt.html", jwt_start_url=jwt_start_url)
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
     login_form = CardLoginForm(request.form, meta={'csrf': False})
+
+    if not is_kiosk():
+        return redirect(url_for("general.login_jwt"))
 
     if login_form.validate_on_submit():
         card_serial = login_form.serial_number.data
@@ -65,6 +93,7 @@ def login():
             return redirect(url_for("general.enroll_card_number"))
 
     return render_template("login.html", login_form=login_form)
+
 
 @bp.route("/logout")
 def logout():
@@ -233,6 +262,15 @@ def storage_login():
     redirect_url = redirect_url.update_query(login_token=encoded)
     return redirect(redirect_url)
 
+def is_kiosk():
+    kiosk_token = current_app.config["KIOSK_TOKEN"]
+    user_agent = request.headers.get('User-Agent')
+
+    if kiosk_token in user_agent:
+        return True
+    else:
+        return False
+    
 def init_app(app):
     app.register_blueprint(bp)
     app.register_blueprint(quiz.bp)
