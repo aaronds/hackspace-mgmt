@@ -45,13 +45,18 @@ def index():
 
 @bp.route("/login/jwt", methods=("GET", "POST"))
 def login_jwt():
+    try_jwt = request.args.get('tryJwt')
     jwt_token = request.args.get('jwt') 
     jwt_public_key_file = current_app.config["JWT_LOGIN_PUBLIC_KEY_FILE"]
     jwt_start_url = current_app.config["JWT_LOGIN_START_URL"]
     jwt_audience = current_app.config["JWT_LOGIN_AUDIENCE"]
 
+        
     if is_kiosk():
         return redirect(url_for("general.login"))        
+
+    if try_jwt is not None and try_jwt != "":
+        return redirect(jwt_start_url)
 
     if jwt_token is not None and jwt_token != "":
         with open(jwt_public_key_file) as kf:
