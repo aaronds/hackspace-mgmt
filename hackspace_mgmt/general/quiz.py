@@ -80,6 +80,66 @@ def md_parse(text: str):
     text = IMAGE_MD_REGEX.sub(make_img, text)
     return Markup(text)
 
+@bp.route("/quiz/<int:quiz_id>/intro", methods=("GET", "POST"))
+@login_required
+def intro(quiz_id, key):
+    machine_id = request.args.get("machine_id")
+    if machine_id is not None:
+        return_url = url_for("induction.machine", machine_id=machine_id)
+    else:
+        return_url = url_for("general.index")
+
+    quiz = db.get_or_404(Quiz, quiz_id)
+
+    quiz_data = yaml.load(quiz.questions, Loader=yaml.CLoader)
+
+    return render_template("quiz_intro.html", intro_text=intro_text, quiz_form=quiz_form, quiz_title=quiz.title, return_url=return_url)
+
+
+@bp.route("/quiz/<int:quiz_id>/question/<string:key>", methods=("GET", "POST"))
+@login_required
+def question(quiz_id, key):
+
+    machine_id = request.args.get("machine_id")
+    if machine_id is not None:
+        return_url = url_for("induction.machine", machine_id=machine_id)
+    else:
+        return_url = url_for("general.index")
+
+    quiz = db.get_or_404(Quiz, quiz_id)
+
+    quiz_data = yaml.load(quiz.questions, Loader=yaml.CLoader)
+
+    class QuizForm(FlaskForm):
+        submit_label = "Submit"
+
+    question = quiz_data.items().get(key)
+
+    set_quiz_attr(QuizForm, question, key) 
+
+    quiz_form = QuizForm(request.form, quiz_data=quiz_data)
+
+    now=datetime.now(timezone.utc)
+
+    if quiz_form.validate_on_submit():
+
+        flash(correct_msg)
+        return redirect(return_url)
+    elif request.method == "POST":
+        create_audit_log(
+            "quiz",
+            "fail",
+            data={
+                "questions": quiz_data,
+                "quiz_id": quiz.id
+            },
+            member=g.member,
+            logged_at=now
+        )
+
+    intro_text = md_parse(quiz.intro)
+
+    return render_template("quiz_question.html", intro_text=intro_text, quiz_form=quiz_form, quiz_title=quiz.title, return_url=return_url)
 
 @bp.route("/quiz/<int:quiz_id>", methods=("GET", "POST"))
 @login_required
@@ -106,7 +166,8 @@ def index(quiz_id):
                 answer_validator = Exactly(question["correct_answer"], question.get("incorrect_hint"))
                 field = fields.RadioField(label, choices=choices, validators=[InputRequired(), answer_validator])
             elif qtype == "select_all":
-                answer_validator = Exactly(set(question["correct_answers"]), question.get("incorrect_hint"))
+                number_of_answers = len(set(question["correct_answers"]))
+                answer_validator = Exactly(set(question["correct_answers"]), question.get("incorrect_hint") + f" (choose {number_of_answers} answers)")
                 choices = list((k, md_parse(v)) for k,v in question["answers"].items())
                 field = MultiCheckboxField(label, choices=choices, validators=[answer_validator])
             elif qtype == "yes_no":
@@ -125,12 +186,9 @@ def index(quiz_id):
 
     now=datetime.now(timezone.utc)
 
-    if quiz_form.validate_on_submit():
-        upsert_stmt = insert(QuizCompletion).values(
-            member_id=g.member.id,
-            quiz_id=quiz.id,
-            completed_on=now
-        ).on_conflict_do_update(
+    if quiz_form.validate_on_submit(): 
+
+        upsert_stmt = insert(QuizCompletion).values( member_id=g.member.id, quiz_id=quiz.id, completed_on=now).on_conflict_do_update(
             index_elements=[QuizCompletion.quiz_id, QuizCompletion.member_id],
             set_=dict(
                 completed_on=now
@@ -183,3 +241,73 @@ def index(quiz_id):
     intro_text = md_parse(quiz.intro)
 
     return render_template("quiz.html", intro_text=intro_text, quiz_form=quiz_form, quiz_title=quiz.title, return_url=return_url)
+
+def set_quiz_attr(quizForm, question, key):
+    qtype = question["type"]
+    label = md_parse(question["label"])
+    if qtype == "pick_one":
+        choices = list((k, md_parse(v)) for k,v in question["answers"].items())
+        answer_validator = Exactly(question["correct_answer"], question.get("incorrect_hint"))
+        field = fields.RadioField(label, choices=choices, validators=[InputRequired(), answer_validator])
+    elif qtype == "select_all":
+        number_of_answers = len(set(question["correct_answers"]))
+        answer_validator = Exactly(set(question["correct_answers"]), question.get("incorrect_hint") + f" (choose {number_of_answers} answers)")
+        choices = list((k, md_parse(v)) for k,v in question["answers"].items())
+        field = MultiCheckboxField(label, choices=choices, validators=[answer_validator])
+    elif qtype == "yes_no":
+        answer_validator = Exactly(question["correct_answer"], question.get("incorrect_hint"))
+        field = fields.BooleanField(label, validators=[answer_validator])
+    elif qtype == "textbox":
+        answer_validator = Exactly(question["correct_answer"], question.get("incorrect_hint"))
+        field = fields.StringField(
+            label,
+            validators=[InputRequired(), answer_validator],
+            render_kw={"autocomplete": "off"},
+        )
+
+    setattr(quizForm, key, field)
+
+def complete_quiz(quiz, member):
+    upsert_stmt = insert(QuizCompletion).values(
+        member_id=g.member.id,
+        quiz_id=quiz.id,
+        completed_on=now
+    ).on_conflict_do_update(
+        index_elements=[QuizCompletion.quiz_id, QuizCompletion.member_id],
+        set_=dict(
+            completed_on=now
+        ),
+    )
+    db.session.execute(upsert_stmt)
+
+    create_audit_log(
+        "quiz",
+        "pass",
+        data={
+            "questions": quiz_data,
+            "quiz_id": quiz.id
+        },
+        member=g.member,
+        logged_at=now,
+        commit=False
+    )
+    db.session.commit()
+
+def correct_message(quiz, machine, member):
+    correct_msg = f"All correct! "
+
+    machine = None
+    if machine_id is not None:
+        machine = db.session.get(Machine, machine_id)
+    if machine:
+        if machine.is_member_inducted(g.member):
+            if machine.legacy_auth == LegacyMachineAuth.padlock:
+                correct_msg += f"The padlock code for the {machine.name} is {machine.legacy_password}."
+            elif machine.legacy_auth == LegacyMachineAuth.password:
+                correct_msg += f"The password for the {machine.name} is \"{machine.legacy_password}\"."
+            else:
+                correct_msg += f"You should now be able to use the {machine.name}."
+        else:
+            correct_msg += "You'll need to complete further training first however."
+
+    return correct_msg
