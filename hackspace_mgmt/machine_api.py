@@ -4,7 +4,7 @@ from flask import (
 )
 
 from hackspace_mgmt.audit import create_audit_log
-from .models import db, Member, Card, Machine, MachineController, Induction
+from .models import db, Member, Card, Machine, MachineController, Induction, Tag, MachineTag
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime, timezone
@@ -267,6 +267,66 @@ def hello(hostname):
 def firmware_update():
     return send_file("/run/hackspace-mgmt/firmware_update.bin", as_attachment=True)
 
+
+def machine_id(tm):
+    return tm.machine_id
+
+def machine_controller_res(mc):
+    return {
+        "id" : mc.id,
+        "machine_id" : mc.machine_id,
+        "hostname" : mc.hostname
+    }
+
+@bp.route('/info/tag/<tag>/status')
+def info_tag_status(tag):
+    tag_query = db.select(Tag).where(Tag.title==tag)
+    tag = db.session.execute(tag_query).scalar_one()
+
+    if not tag:
+        return { "error" : "Tag not found" }, 404
+
+    tag_machine_query = db.select(MachineTag).where(MachineTag.tag_id==tag.id)
+    tag_machines = db.session.scalars(tag_machine_query).all();
+
+    machines = list(map(machine_id, tag_machines)); 
+
+    machine_controller_query = db.select(MachineController).where(MachineController.machine_id.in_(machines))
+
+    machine_controllers = db.session.scalars(machine_controller_query).all();
+
+    mcres = list(map(machine_controller_res, machine_controllers));
+
+    return {
+        "ok" : True,
+        "machine_count" : len(machines),
+        "machine_controller_count" : len(mcres),
+        "machine_controllers" : mcres
+    }
+    
+@bp.route('/info/machine/all')
+def info_machine_all():
+    machine_query = db.select(Machine)
+    machines = [];
+    
+    for machine in db.session.scalars(machine_query).all():
+        machine_controllers_query =  db.select(MachineController).where(MachineController.machine_id==machine.id)
+        machine_controllers = db.session.scalars(machine_controllers_query).all()
+        mcres = list(map(machine_controller_res, machine_controllers));
+
+        machines.append({
+            "id" : machine.id,
+            "name" : machine.name,
+            "machine_controller_count" : len(mcres),
+            "machine_controllers" : mcres
+        })
+
+    return {
+        "ok" : True,
+        "machine_count" : len(machines),
+        "machines" : machines
+    }
+
 @bp.errorhandler(403)
 def not_authorized_error(e):
     return {"unlocked": False}, 403
@@ -274,3 +334,4 @@ def not_authorized_error(e):
 @bp.errorhandler(404)
 def not_found_error(e):
     return {"unlocked": False}, 404
+

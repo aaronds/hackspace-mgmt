@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import JSON, String, ForeignKey, Enum, UniqueConstraint, types, BigInteger
+from sqlalchemy import JSON, String, ForeignKey, Enum, UniqueConstraint, types, BigInteger, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import expression
@@ -83,6 +83,7 @@ class Member(db.Model):
     labels: Mapped[List["Label"]] = relationship(back_populates="member")
 
     quiz_completions: Mapped[List["QuizCompletion"]] = relationship(back_populates="member")
+    updated: Mapped[datetime] = mapped_column(DateTime)
 
     @hybrid_property
     def display_name(self):
@@ -121,10 +122,13 @@ class Machine(db.Model):
     hide_from_home: Mapped[bool] = mapped_column(nullable=False, default=False)
     requires_in_person: Mapped[bool] = mapped_column(server_default=expression.false())
     induction_valid_for_days: Mapped[int] = mapped_column(server_default="0")
+    import_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
+    import_message: Mapped[str] = mapped_column(String(200), nullable=False, default="")
 
     controllers: Mapped[List["MachineController"]] = relationship(back_populates="machine")
     inductions: Mapped[List["Induction"]] = relationship(back_populates="machine")
     quizzes: Mapped[List["Quiz"]] = relationship(secondary="machine_quiz")
+    tags: Mapped[List['Tag']] = relationship(secondary="machine_tag")
 
     def is_member_inducted(self, member: Member, check_can_induct=False):
         member_quizzes = set(completion.quiz for completion in member.quiz_completions if not completion.has_expired())
@@ -239,10 +243,22 @@ class MachineQuiz(db.Model):
 
 class AuditLog(db.Model):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    logged_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    logged_at: Mapped[datetime] = mapped_column(DateTime)
     category: Mapped[str] = mapped_column(String(32))
     event: Mapped[str] = mapped_column(String(32))
     member_id: Mapped[int] = mapped_column(ForeignKey("member.id"))
     data: Mapped[Optional[JSON]] = mapped_column(type_=JSON)
 
     member: Mapped["Member"] = relationship()
+
+
+class Tag(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    def __str__(self):
+        return self.title
+
+class MachineTag(db.Model):
+    machine_id: Mapped[int] = mapped_column(ForeignKey("machine.id"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), primary_key=True)

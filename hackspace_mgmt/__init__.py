@@ -4,14 +4,26 @@ import logging
 from flask import Flask
 from flask_assets import Environment, Bundle
 
+from .limiter import limiter
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY="dev",
         SQLALCHEMY_DATABASE_URI="postgresql+psycopg2://postgres:postgres@localhost:5432/hackspace",
+        SQLALCHEMY_ENGINE_OPTIONS={
+            'pool_size': 5,
+            'pool_recycle' : 60,
+            'pool_pre_ping' : True
+        },
         STORAGE_LOGIN_SECRET="dev",
         STORAGE_APP_URL="http://example.com"
     )
+
+    app.config.from_prefixed_env('MGMT')
+
+    limiter.init_app(app)
+
     if test_config is None:
         app.config.from_pyfile("config.py", silent=True)
     else:
@@ -44,7 +56,6 @@ def create_app(test_config=None):
 
     from . import label_api
     app.register_blueprint(label_api.bp)
-
 
 
     return app

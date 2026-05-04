@@ -9,4 +9,5 @@ pyscss
 wtforms~=3.1
 flask-wtf
 PyYaml
-pyjwt
+flask-limiter==3.11.0
+PyJWT==2.10.1

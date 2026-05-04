@@ -212,7 +212,7 @@ def enroll_personal():
 @login_required
 def storage_login():
     login_secret = current_app.config["STORAGE_LOGIN_SECRET"]
-    name = g.member.display_name
+    name = str(g.member)
     sub = f"member_{g.member.id}"
     email = g.member.email
 
