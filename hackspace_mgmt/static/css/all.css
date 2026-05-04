@@ -145,6 +145,7 @@ input[readonly] {
     width: 4rem;
     height: 4rem;
     display: inline-block;
+    flex-shrink: 0;
     margin-right: 0.5rem; }
 
     .button, button, input[type="button"], input[type="reset"], input[type="submit"] {

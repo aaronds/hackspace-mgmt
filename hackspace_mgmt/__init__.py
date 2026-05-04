@@ -17,7 +17,11 @@ def create_app(test_config=None):
             'pool_pre_ping' : True
         },
         STORAGE_LOGIN_SECRET="dev",
-        STORAGE_APP_URL="http://example.com"
+        STORAGE_APP_URL="http://example.com",
+        JWT_LOGIN_PUBLIC_KEY_FILE="./keys/members-public.key",
+        JWT_LOGIN_START_URL="/.well-known/token-swap-discourse-jwt/start",
+        JWT_LOGIN_AUDIENCE="bhs-members",
+        KIOSK_TOKEN="be-kiosk"
     )
 
     app.config.from_prefixed_env('MGMT')
