@@ -40,7 +40,7 @@
     {% if return_url %}
     <div class="two-column">
         <input type="submit" value="{{ form.submit_label or 'Save' }}" />
-        <a href="{{ return_url }}" class="button button-outline" role="button">Cancel</a>
+        <a href="{{ return_url }}" onClick="return confirm('Are you sure? All changes will be lost')" class="button button-outline" role="button">Cancel</a>
     </div>
     {% else %}
     <div>

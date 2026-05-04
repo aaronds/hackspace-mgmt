@@ -1,0 +1,24 @@
+{% import 'utils.html' as utils with context %}
+{% extends "base.html" %}
+
+{% block title %}Hackspace home{% endblock %}
+
+{% block breadcrumbs %}
+<li><a href="{{ url_for('general.index') }}">Home</a></li>
+<li><a href="{{ url_for('induction.index') }}">Inductions</a></li>
+<li>{{ quiz_title }}</li>
+{% endblock %}
+
+{% block content %}
+<h2>{{ quiz_title }}</h2>
+<p>Question {{ current + 1 }} of {{ questions_total }}</p>
+{% call utils.form_tag() %}
+    {{ quiz_form.hidden_tag() }}
+    {% for field in quiz_form if field.widget.input_type != 'hidden' %}
+    {{ utils.render_field(quiz_form, field) }}
+    <hr/>
+    {% endfor %}
+    {{ utils.render_form_buttons(quiz_form, return_url) }}
+{% endcall %}
+
+{% endblock %}
