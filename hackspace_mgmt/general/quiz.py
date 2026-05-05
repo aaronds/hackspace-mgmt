@@ -113,8 +113,8 @@ def question(quiz_id, key):
     if "quizzes" not in session :
         session["quizzes"] = { }
 
-    if ("Q" + str(quiz_id)) not in session["quizzes"] :
-        session["quizzes"]["Q" + str(quiz_id)] = { }
+    if (str(quiz_id)) not in session["quizzes"] :
+        session["quizzes"][str(quiz_id)] = { }
 
     quiz = db.get_or_404(Quiz, quiz_id)
 
@@ -139,19 +139,20 @@ def question(quiz_id, key):
 
     if quiz_form.validate_on_submit():
 
-        session["quizzes"]["Q" + str(quiz_id)][key] = question["correct_answers"] if "correct_answers" in  question else question["correct_answer"]
-        session["quizzes"] = session["quizzes"] # Force session update
+        # `validate_on_submit` checks correct / incorrect, answers stored to check all questions at the end
+        session["quizzes"][str(quiz_id)][key] = question["correct_answers"] if "correct_answers" in  question else question["correct_answer"]
+        session.modified = True
 
 
         if current + 1 >= len(question_keys) :
             missed = None
             for key in question_keys:
 
-                if key not in  session["quizzes"]["Q" + str(quiz_id)] :
+                if key not in  session["quizzes"][str(quiz_id)] :
                     missed = key
                     break
 
-                session_value = session["quizzes"]["Q" + str(quiz_id)][key] 
+                session_value = session["quizzes"][str(quiz_id)][key] 
                 question_value = quiz_data[key]['correct_answers'] if "correct_answers" in quiz_data[key] else quiz_data[key]['correct_answer']
 
                 if session_value is None or question_value != session_value :
@@ -160,6 +161,9 @@ def question(quiz_id, key):
             if missed is None :
                 complete_quiz(quiz, quiz_data, g.member) 
                 correct_message_text = correct_message(quiz, machine_id, g.member)
+
+                session["quizzes"][str(quiz_id)] = {}
+                session.modified = True
 
                 flash(correct_message_text)
                 return redirect(return_url)
@@ -171,10 +175,10 @@ def question(quiz_id, key):
 
     elif request.method == "POST":
         create_audit_log(
-            "quiz",
+            "question",
             "fail",
             data={
-                "questions": quiz_data,
+                "question": question,
                 "quiz_id": quiz.id
             },
             member=g.member,
